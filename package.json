@@ -1,0 +1,21 @@
+{
+    "name": "dungeons-filter-api",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "dev": "tsc && node dist/server",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "@types/express": "^5.0.6",
+        "dotenv": "^17.4.2",
+        "express": "^5.2.1",
+        "nbtify": "^2.2.0",
+        "postgres": "^3.4.9"
+    }
+}

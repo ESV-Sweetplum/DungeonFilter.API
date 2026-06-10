@@ -6,7 +6,7 @@ const app = express();
 
 app.get('/', async (req, res) => {
     const name = req.query.name as string;
-    const floor = (req.query.floor as string).toLowerCase();
+    const floor = ((req.query.floor as string) ?? '').toLowerCase();
     if (!name) {
         res.status(400).send('Name not given.');
         return;
@@ -23,7 +23,7 @@ app.get('/', async (req, res) => {
         return;
     }
 
-    const uuid = (await fetch(`https://api.mojang.com/users/profiles/minecraft/${name}`).then(resp => resp.json())).id;
+    const uuid = (await fetch(`https://api.mojang.com/users/profiles/minecraft/${name}`).then(resp => resp.json()))?.id;
     if (!uuid) {
         res.status(404).send('User not found.');
         return;

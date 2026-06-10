@@ -1,6 +1,6 @@
 import express from 'express';
-import sql from './db';
-import xpToLevel from './util/xpToLevel';
+import sql from './db.js';
+import xpToLevel from './util/xpToLevel.js';
 import * as NBT from 'nbtify';
 const app = express();
 

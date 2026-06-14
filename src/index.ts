@@ -72,6 +72,7 @@ app.get('/', async (req, res) => {
     }, {});
 
     floorData.times_played = dungeonsData.dungeon_types.catacombs.times_played[floorId];
+    floorData.floor = floor.toUpperCase();
 
     const inventoryData = await NBT.read(Buffer.from(profileData.inventory.inv_contents.data, 'base64'));
     // const storageData = await NBT.read(Buffer.from(profileData.inventory));

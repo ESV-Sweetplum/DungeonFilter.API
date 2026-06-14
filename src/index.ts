@@ -23,11 +23,14 @@ app.get('/', async (req, res) => {
         return;
     }
 
-    const uuid = (await fetch(`https://api.mojang.com/users/profiles/minecraft/${name}`).then(resp => resp.json()))?.id;
-    if (!uuid) {
-        res.status(404).send('User not found.');
+    const userData = await fetch(`https://api.mojang.com/users/profiles/minecraft/${name}`).then(resp => resp.json());
+    if (userData.errorMessage) {
+        res.status(404).send(userData.errorMessage);
         return;
     }
+    const uuid = userData.id;
+    const username = userData.name;
+
     const users = await sql`SELECT * FROM users WHERE uuid=${uuid}`;
     if (users.length) {
         res.type('application/json').send({ data: users[0] });
@@ -83,7 +86,7 @@ app.get('/', async (req, res) => {
 
     const dungeonsClass = dungeonsData.selected_dungeon_class;
     const playerData = {
-        username: name,
+        username,
         uuid,
     };
     const currentData = {

@@ -96,11 +96,11 @@ app.get('/', async (req, res) => {
         tunings: profileData.accessory_bag_storage.tuning.slot_0,
     };
 
-    let totalRunCount = dungeonsData.dungeon_types.catacombs.tier_completions['0'];
+    let totalRunCount = dungeonsData.dungeon_types.catacombs.tier_completions['0'] ?? 0;
     for (let i = 1; i <= 7; i++) {
         const str = i.toString();
-        totalRunCount += dungeonsData.dungeon_types.catacombs.tier_completions[str];
-        totalRunCount += dungeonsData.dungeon_types.master_catacombs.tier_completions[str];
+        totalRunCount += dungeonsData.dungeon_types.catacombs.tier_completions[str] ?? 0;
+        totalRunCount += dungeonsData.dungeon_types.master_catacombs.tier_completions[str] ?? 0;
     }
 
     // console.log(profileData.inventory.backpack_contents);

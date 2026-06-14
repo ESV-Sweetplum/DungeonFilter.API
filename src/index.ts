@@ -43,7 +43,7 @@ app.get('/', async (req, res) => {
     }).then(res => res.json());
 
     if (!data.success) {
-        res.status(403).send(`An error occurred with the hypixel API: ${JSON.stringify(res)}`);
+        res.status(403).send(`An error occurred with the hypixel API: ${JSON.stringify(data)}`);
     }
 
     if (!data.profiles) {
@@ -68,6 +68,8 @@ app.get('/', async (req, res) => {
         return obj;
     }, {});
 
+    floorData.times_played = dungeonsData.dungeon_types.catacombs.times_played[floorId];
+
     const inventoryData = await NBT.read(Buffer.from(profileData.inventory.inv_contents.data, 'base64'));
     // const storageData = await NBT.read(Buffer.from(profileData.inventory));
     const invItems = (inventoryData.data as any).i
@@ -80,6 +82,16 @@ app.get('/', async (req, res) => {
         });
 
     const dungeonsClass = dungeonsData.selected_dungeon_class;
+    const playerData = {
+        username: name,
+        uuid,
+    };
+    const currentData = {
+        selected_class: dungeonsClass,
+        magical_power: profileData.accessory_bag_storage.highest_magical_power,
+        selected_power: profileData.accessory_bag_storage.selected_power,
+        tunings: profileData.accessory_bag_storage.tuning.slot_0,
+    };
 
     // console.log(profileData.inventory.backpack_contents);
     // console.log(profileData.inventory.ender_chest_contents);
@@ -87,12 +99,9 @@ app.get('/', async (req, res) => {
     res.type('application/json').send({
         success: true,
         floorData,
+        playerData,
+        currentData,
         secrets: dungeonsData.secrets,
-        selected_class: dungeonsClass,
-        times_played: dungeonsData.dungeon_types.catacombs.times_played[floorId],
-        magical_power: profileData.accessory_bag_storage.highest_magical_power,
-        selected_power: profileData.accessory_bag_storage.selected_power,
-        tunings: profileData.accessory_bag_storage.tuning.slot_0,
         levels: {
             total: xpToLevel(dungeonsData.dungeon_types.catacombs.experience),
             healer: xpToLevel(dungeonsData.player_classes.healer.experience),

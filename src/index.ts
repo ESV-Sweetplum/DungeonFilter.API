@@ -2,6 +2,24 @@ import express from 'express';
 import sql from './db.js';
 import xpToLevel from './util/xpToLevel.js';
 import * as NBT from 'nbtify';
+import getTimeScore from './scoring/time.js';
+import {
+    DEFAULT_CATA_REQS,
+    DEFAULT_MP_REQS,
+    DEFAULT_TIME_REQS,
+    MAX_CATA_BONUS,
+    MAX_CLASS_SPECIALTY_BONUS,
+    MAX_MP_SCORE,
+    MAX_SECRET_SCORE,
+    MAX_TIME_SCORE,
+} from './scoring/constants.js';
+import getSecretScore from './scoring/secret.js';
+import { Class } from './interfaces/Class.js';
+import getClassSpecialtyBonus from './scoring/classSpecialtyBonus.js';
+import { Floor } from './interfaces/Floor.js';
+import getMpScore from './scoring/mp.js';
+import getRequiredPower from './util/getRequiredPower.js';
+import getCataBonus from './scoring/cataBonus.js';
 const app = express();
 
 app.get('/', async (req, res) => {
@@ -17,11 +35,16 @@ app.get('/', async (req, res) => {
         return;
     }
 
-    const validFloors = ['e', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7'];
+    const validFloors = Object.keys(Floor).map(f => f.toLowerCase());
     if (!validFloors.includes(floor)) {
         res.status(400).send('Invalid floor given.');
         return;
     }
+    const floorId = Floor[floor.toUpperCase() as keyof typeof Floor];
+
+    const mpReq = parseInt((req.query.mpReq as string) ?? DEFAULT_MP_REQS[floorId].toString());
+    const timeReq = parseInt((req.query.timeReq as string) ?? DEFAULT_TIME_REQS[floorId].toString());
+    const cataReq = parseInt((req.query.cataReq as string) ?? DEFAULT_CATA_REQS[floorId].toString());
 
     const userData = await fetch(`https://api.mojang.com/users/profiles/minecraft/${name}`).then(resp => resp.json());
     if (userData.errorMessage) {
@@ -57,7 +80,6 @@ app.get('/', async (req, res) => {
     const profileData = data.profiles.filter((p: any) => p.selected)[0].members[uuid];
     const dungeonsData = profileData.dungeons;
     const sourceData = dungeonsData.dungeon_types[floor.includes('m') ? 'master_catacombs' : 'catacombs'];
-    const floorId = (validFloors.indexOf(floor) - (floor.includes('m') ? 7 : 0)).toString();
     const desiredInfo = [
         'tier_completions',
         'milestone_completions',
@@ -104,14 +126,61 @@ app.get('/', async (req, res) => {
         totalRunCount += dungeonsData.dungeon_types.master_catacombs.tier_completions[str] ?? 0;
     }
 
-    // console.log(profileData.inventory.backpack_contents);
-    // console.log(profileData.inventory.ender_chest_contents);
+    const scoreData: Record<string, [number, number, number?]> = {
+        time: [
+            getTimeScore(
+                ['f5', 'f6', 'f7', 'm5', 'm6', 'm7'].includes(floor)
+                    ? floorData.fastest_time_s_plus
+                    : floorData.fastest_time_s,
+                timeReq,
+            ),
+            MAX_TIME_SCORE,
+        ],
+        secret: [
+            getSecretScore(
+                dungeonsData.secrets / totalRunCount,
+                Class[dungeonsClass.toUpperCase() as keyof typeof Class],
+            ),
+            MAX_SECRET_SCORE,
+        ],
+        classSpecialtyBonus: [
+            getClassSpecialtyBonus(
+                [
+                    xpToLevel(dungeonsData.player_classes.healer.experience),
+                    xpToLevel(dungeonsData.player_classes.mage.experience),
+                    xpToLevel(dungeonsData.player_classes.berserk.experience),
+                    xpToLevel(dungeonsData.player_classes.archer.experience),
+                    xpToLevel(dungeonsData.player_classes.tank.experience),
+                ],
+                xpToLevel(dungeonsData.player_classes[dungeonsClass].experience),
+            ),
+            0,
+            MAX_CLASS_SPECIALTY_BONUS,
+        ],
+        mp: [
+            getMpScore(
+                currentData.magical_power,
+                mpReq,
+                currentData.selected_power,
+                getRequiredPower(invItems, Class[dungeonsClass.toUpperCase() as keyof typeof Class]),
+            ),
+            MAX_MP_SCORE,
+        ],
+        cataBonus: [
+            getCataBonus(xpToLevel(dungeonsData.dungeon_types.catacombs.experience), cataReq),
+            0,
+            MAX_CATA_BONUS,
+        ],
+    };
+
+    scoreData.total = Object.values(scoreData).reduce(([tc, tt], [cc, ct]) => [tc + cc, tt + ct], [0, 0]);
 
     res.type('application/json').send({
         success: true,
         floorData,
         playerData,
         currentData,
+        scoreData,
         secrets: dungeonsData.secrets,
         runCount: totalRunCount,
         levels: {
